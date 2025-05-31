@@ -2,6 +2,13 @@
 
 Quinn White, Min Jia, and Songran Wang
 
+## Code
+
+* Files in the `scripts` directory:
+  * `data_cleaning.Rmd` cleans the phase 2 data from RCT NIDA-CTN-0030 obtained from the [public.ctn0094data R package](https://github.com/CTN-0094/public.ctn0094data) to structure it into the needed format for our analysis.
+  * `decision_list_opioid_data.R` runs the decision list approach of Zhang et al. (2018) on this data 
+* Files in the `supplementary_code_files` directory is from the supplement of Zhang et al. (2018), which provides an implentation of their approach to estimate decision lists.
+
 ## Project Description 
 
 ### Background
