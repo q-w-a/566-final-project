@@ -1,0 +1,360 @@
+---
+title: "Data Cleaning"
+author: "Quinn White"
+date: "`r Sys.Date()`"
+output: 
+  rmdformats::readthedown:
+    code_folding: hide
+    toc_depth: 4
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = "../output")})
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+
+```{r}
+
+
+if (!requireNamespace("public.ctn0094data", quietly = TRUE)) {
+  install.packages("public.ctn0094data")
+}
+
+library(public.ctn0094data)
+library(tidyverse)
+
+
+# select only individuals who were phase II in RCT 
+data(everybody)
+ids_30 <- everybody %>% 
+  filter(project == 30) %>%
+  pull(who)
+
+ids_30_w_phase_2 <- randomization %>%
+    filter(who %in% ids_30)  %>% 
+  filter(which==2) %>% 
+  pull(who)
+
+```
+
+
+
+
+```{r}
+
+# treatment assignment 
+data(randomization)
+
+treatment_df <- randomization %>%
+  filter(who %in% ids_30_w_phase_2) %>%
+  group_by(who) %>%
+  mutate(first_time = min(when),
+         second_time = max(when)) %>%
+  ungroup() %>%
+  mutate(treatment_time = ifelse(
+    when == first_time, 
+    "first_treatment",
+    "second_treatment")) %>%
+  select(-c(which,when)) %>%
+  pivot_wider(names_from=treatment_time,
+              values_from=treatment)
+
+```
+
+```{r,eval=FALSE}
+
+# treatment dosages 
+data(treatment)
+treatment_doses <- treatment
+
+treatment_doses %>%
+    filter(who %in% ids_30_w_phase_2) %>%
+  left_join(treatment_df[c("who","first_time","second_time")]) %>%
+  filter(who==48) %>%
+    pivot_longer(c(first_time,second_time),
+               names_to="phase") %>%
+  ggplot(aes(x=when, y =amount, color=factor(who), group=who)) +
+  geom_line() +
+  facet_wrap(~phase) +
+  guides(color="none")
+
+```
+
+```{r,eval=FALSE}
+
+# dropouts 
+
+# successfully completed phase 2 
+treatment_doses %>%
+    filter(who %in% ids_30_w_phase_2) %>%
+    left_join(treatment_df[c("who","first_time","second_time")]) %>%
+    filter(when >= second_time) %>% 
+    mutate(week=ceiling(when/7)+1) %>% 
+  group_by(who) %>% 
+  summarize(n_weeks = max(week) - min(week)) %>% 
+  filter(n_weeks >=12) %>% nrow()
+
+
+
+treatment_doses %>%
+    filter(who %in% ids_30_w_phase_2) %>%
+    left_join(treatment_df[
+      c("who","first_time","second_time")]) %>%
+  mutate(week = ceiling(when/7)+1) %>%
+  mutate(phase = case_when(
+    when < first_time ~ 0,
+    when >= first_time & when < second_time ~ 1,
+    when >= second_time ~ 2,
+    )) %>%
+  group_by(phase, who) %>%
+  mutate(week_rank = rank(week)) %>%
+  select(phase, who, week_rank) 
+```
+
+```{r}
+
+# urine screening
+data(uds)
+
+# first phase was 12 weeks 
+# day 15 is beginning of taper 
+# number of weeks post 15th day in phase 1 with positive screening
+# (i.e. beginning of taper)
+number_weeks_positive_screening <- uds %>%
+  filter(who %in% ids_30_w_phase_2) %>% 
+  filter(what=="Opioid") %>%
+  mutate(week = ceiling(when/7)+1) %>%
+  left_join(treatment_df) %>%
+  mutate(phase = case_when(
+    when < first_time ~ 0,
+    when >= first_time & when < second_time ~ 1,
+    when >= second_time ~ 2,
+    )) %>%
+  select(phase, who, what, when, week, first_time) %>%
+  filter(phase ==1 & first_time+ when >=15) %>%
+  group_by(who) %>%
+  summarize(n_weeks_positive = n()) %>%
+  right_join(tibble(who=ids_30_w_phase_2)) %>%
+  mutate(n_weeks_positive =
+           ifelse(is.na(n_weeks_positive), 
+                0,
+                n_weeks_positive))
+
+uds %>%
+  filter(who %in% ids_30_w_phase_2 & what=="Opioid") %>%
+  nrow()
+
+
+uds <- uds %>%
+  mutate(when = ifelse(who == 2020 & when == 5, 4, when))
+
+
+```
+
+```{r}
+
+get_even <- function(x,y) {
+  ifelse(x %% 2 == 0, x, y)
+}
+
+get_even <- Vectorize(get_even)
+
+visit_w_screening_phase_1 <- visit %>%
+  filter(who %in% ids_30_w_phase_2) %>%
+  group_by(who) %>%
+  select(who, when, visit, what) %>%
+  filter(what != "MISSING") %>%
+  filter(visit %in% c("P1Wk1A", "P1Wk1B", "P1Wk2", "P1Wk3", "P1Wk4", 
+                       "P1Wk6", "P1Wk8", "P1Finl"))  %>%
+  group_by(who) %>%
+  # remove entries where only one day between 
+  mutate(diff = when - lag(when, 1)) %>%
+  filter(diff > 1 | is.na(diff)) %>%
+  ungroup() %>% 
+  left_join(treatment_df[c("who", "first_time", "second_time")])  %>%
+  # Add week number as numeric where possible
+  mutate(week_num = as.numeric(str_extract(visit, "(?<=P1Wk)\\d+")))%>%
+  # Find max week with non-NA value
+  group_by(who) %>%
+  mutate(last_week_obs = max(week_num[!is.na(when)],
+                             na.rm = TRUE)) %>% 
+    mutate(week = ceiling((when-first_time)/7)) %>%
+   mutate(week_updated = 
+            case_when(
+                   week == 11 ~ pmax(10, last_week_obs+2),
+                   week==9 ~ pmax(8, last_week_obs+2),
+                   week==7 ~ pmax(6, last_week_obs+2),
+                   week == 13 ~  pmax(12, last_week_obs+2),
+                   week == 5 ~ pmax(4, get_even(last_week_obs+2, last_week_obs+1)),
+                   week == 3 ~ pmax(3, get_even(last_week_obs+2, last_week_obs+1)),
+                   TRUE~pmax(week, get_even(last_week_obs+1, last_week_obs+2)
+                   )))  %>% 
+  mutate(visit_new = ifelse(!is.na(week_num), paste0("P1Wk", week_num),
+                            paste0("P1Wk", week_updated))) %>% 
+  mutate(visit_new = ifelse(grepl("A|B", visit), paste0(visit), visit_new))  %>%
+  select(who, visit_new, when) %>%
+  # remove duplicated what entries 
+  distinct() %>% 
+  left_join(uds %>%
+  filter(who %in% ids_30_w_phase_2 & what=="Opioid") %>%
+    rename(drug=what),
+  by=c("when"="when", "who"="who")) %>%
+  mutate(drug=as.character(drug)) %>%
+  mutate(visit_new =factor(visit_new, levels= c(
+    "P1Wk1A", "P1Wk1B" ,"P1Wk2" , "P1Wk3" , "P1Wk4" , 
+    "P1Wk6" ,"P1Wk8" , "P1Wk10" , "P1Wk12"))) %>% 
+  group_by(who) %>%
+  complete(visit_new) %>%
+  mutate(drug = case_when(
+    is.na(when) ~ "Opioid",
+    is.na(drug) ~ "No Opioid",
+    TRUE ~ drug 
+  )) %>%
+  group_by(who) %>%
+  mutate(prop_positive = sum(drug == "Opioid")/ 
+           sum(drug== "Opioid" | drug == "No Opioid"),
+         n_visits_attended = sum(!is.na(when)) )  %>%
+  ungroup()
+
+prop_positive_phase_1 <- visit_w_screening_phase_1 %>%
+  select(who, prop_positive) %>%
+  distinct()
+
+  
+```
+
+
+```{r}
+
+visit_w_screening_phase_2 <- visit %>%
+  filter(who %in% ids_30_w_phase_2) %>%
+  group_by(who) %>%
+  select(who, when, visit, what) %>%
+  filter(what != "MISSING") %>%
+  filter(grepl("P2", visit)) %>%
+  filter(visit !="P2Unsc") %>%
+  group_by(who) %>%
+  # remove entries where only one day between 
+  mutate(diff = when - lag(when, 1)) %>%
+  filter(diff > 1 | is.na(diff)) %>%
+  ungroup() %>% 
+  left_join(treatment_df[c("who", "first_time", "second_time")])  %>%
+  filter(when >= second_time) %>% 
+  # Add week number as numeric where possible
+  mutate(week_num = as.numeric(str_extract(visit, "(?<=P2Wk)\\d+")))%>%
+  # Find max week with non-NA value
+  group_by(who) %>%
+  mutate(last_week_obs = max(week_num[!is.na(when)],
+                             na.rm = TRUE)) %>% 
+    mutate(week = ceiling((when-second_time)/7)) %>%
+   # setting week of last visit 
+   mutate(week_updated = case_when(
+     week == 16 ~ pmax(get_even(last_week_obs+2,last_week_obs+1), 16),
+     week == 18 ~ pmax(get_even(last_week_obs+2,last_week_obs+1), 18),
+     week == 19 ~ pmax(get_even(last_week_obs+2,last_week_obs+1), 18),
+     week == 17 ~ pmax(get_even(last_week_obs+1,last_week_obs+2), 16),
+     week == 21 ~ pmax(get_even(last_week_obs+1,last_week_obs+2), 20),
+     week == 23 ~ pmax(get_even(last_week_obs+1,last_week_obs+2), 22),
+     TRUE~ pmax(week, last_week_obs+1)),
+      week_updated = pmin(week_updated,24))  %>% 
+  mutate(visit_new = ifelse(!is.na(week_num), paste0("P2Wk", week_num),
+                            paste0("P2Wk", week_updated))) %>% 
+  mutate(visit_new = ifelse(grepl("A|B", visit), paste0(visit), visit_new)) %>%
+  mutate(visit_new = factor(visit_new,
+                            levels=c("P2Wk1A", "P2Wk1B", "P2Wk2" , "P2Wk3" , "P2Wk4" ,
+                                     "P2Wk5",  "P2Wk6" , "P2Wk9" , "P2Wk7" , "P2Wk8",
+                                     "P2Wk10", "P2Wk11" ,"P2Wk12", "P2Wk13" ,"P2Wk14",
+                                     "P2Wk15", "P2Wk18" ,"P2Wk20" ,"P2Wk22" ,"P2Wk24",
+                                     "P2Wk16"))) %>%
+  complete(visit_new) %>%
+  select(who, visit_new, when) %>%
+  # remove duplicated what entries 
+  distinct() %>% 
+  left_join(uds %>%
+  filter(who %in% ids_30_w_phase_2 & what=="Opioid") %>%
+    rename(drug=what),
+  by=c("when"="when", "who"="who")) %>%
+  mutate(drug=as.character(drug)) %>%
+  # NA for when happens when they missed a visit, 
+  # which should be counted as positive
+  mutate(drug = case_when(
+    is.na(when) ~ "Opioid",
+    is.na(drug) ~ "No Opioid",
+    TRUE ~ drug 
+  )) 
+
+```
+
+```{r}
+
+phase_2_outcome <- visit_w_screening_phase_2 %>%
+  group_by(who) %>%
+  mutate(past_two_weeks_clean = sum(
+    visit_new %in% c("P2Wk22", "P2Wk24") & 
+      drug == "No Opioid")) %>%
+  mutate(outcome = as.numeric(past_two_weeks_clean==2))  %>%
+  select(who, outcome) %>%
+  distinct() %>%
+  ungroup()
+
+
+visit_w_screening_phase_2 %>%
+  group_by(visit_new) %>%
+  summarize(n=n()) 
+
+
+```
+
+The primary outcome measure for Phase 2 is “substantial improvement,” defined as abstaining from opioids during the last week AND for at least 2 of the previous 3 weeks of the third month of BUP/NX treatment. Abstinence is determined by self-reports of opioid abstinence (missing urines will be considered positive for opioids.
+
+```{r}
+
+data(psychiatric)
+
+depression <- psychiatric %>%
+  filter(who %in% ids_30_w_phase_2) %>%
+  mutate(reported_depression = ifelse(has_major_dep=="Yes", 1, 0)) %>%
+  select(who, reported_depression)
+
+# rbs %>%
+#   filter(who %in% ids_30_w_phase_2) %>%
+#   filter(what == "opioid" | what == "heroin") %>%
+#   group_by(what) %>%
+#   ggplot(aes(x=days)) +
+#   geom_histogram() +
+#   facet_wrap(~what)
+
+age_sex <- demographics %>%
+  filter(who %in% ids_30_w_phase_2) %>% 
+  select(who, age, is_male) %>%
+  mutate(is_male = as.numeric(is_male=="Yes"))
+
+data(withdrawal_pre_post)
+withdrawal_pre <- withdrawal_pre_post %>%
+  filter(who %in% ids_30_w_phase_2 & what == "pre") %>%
+  mutate(moderate_to_severe_withdrawal_pre_induction = as.numeric(withdrawal %in% c(2,3))) %>%
+  mutate(m = mean(moderate_to_severe_withdrawal_pre_induction)) %>%
+  select(who, moderate_to_severe_withdrawal_pre_induction) 
+
+
+
+# final data 
+final_data <- phase_2_outcome %>%
+  left_join(prop_positive_phase_1) %>%
+  left_join(age_sex) %>%
+  left_join(depression) %>%
+  left_join(withdrawal_pre) %>%
+  mutate(across(c(is_male, 
+                  reported_depression, 
+                  moderate_to_severe_withdrawal_pre_induction),
+                as_factor))
+
+saveRDS(final_data, "../data/final_data.RDS")
+
+```
+
+
