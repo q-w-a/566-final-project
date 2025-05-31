@@ -1388,7 +1388,11 @@ White</p>
 <span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>ids_30_w_phase_2 <span class="ot">&lt;-</span> randomization <span class="sc">%&gt;%</span></span>
 <span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>    <span class="fu">filter</span>(who <span class="sc">%in%</span> ids_30)  <span class="sc">%&gt;%</span> </span>
 <span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>  <span class="fu">filter</span>(which<span class="sc">==</span><span class="dv">2</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>  <span class="fu">pull</span>(who)</span></code></pre></div>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>  <span class="fu">pull</span>(who)</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>treatment_assignment <span class="ot">&lt;-</span> randomization <span class="sc">%&gt;%</span></span>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>    <span class="fu">filter</span>(who <span class="sc">%in%</span> ids_30 <span class="sc">&amp;</span> which <span class="sc">==</span> <span class="dv">2</span>)  <span class="sc">%&gt;%</span> </span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>    <span class="fu">select</span>(who, treatment)</span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># treatment assignment </span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">data</span>(randomization)</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
@@ -1665,16 +1669,17 @@ urines will be considered positive for opioids.</p>
 <span id="cb12-29"><a href="#cb12-29" tabindex="-1"></a></span>
 <span id="cb12-30"><a href="#cb12-30" tabindex="-1"></a><span class="co"># final data </span></span>
 <span id="cb12-31"><a href="#cb12-31" tabindex="-1"></a>final_data <span class="ot">&lt;-</span> phase_2_outcome <span class="sc">%&gt;%</span></span>
-<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a>  <span class="fu">left_join</span>(prop_positive_phase_1) <span class="sc">%&gt;%</span></span>
-<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a>  <span class="fu">left_join</span>(age_sex) <span class="sc">%&gt;%</span></span>
-<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a>  <span class="fu">left_join</span>(depression) <span class="sc">%&gt;%</span></span>
-<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a>  <span class="fu">left_join</span>(withdrawal_pre) <span class="sc">%&gt;%</span></span>
-<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(is_male, </span>
-<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a>                  reported_depression, </span>
-<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a>                  moderate_to_severe_withdrawal_pre_induction),</span>
-<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a>                as_factor))</span>
-<span id="cb12-40"><a href="#cb12-40" tabindex="-1"></a></span>
-<span id="cb12-41"><a href="#cb12-41" tabindex="-1"></a><span class="fu">saveRDS</span>(final_data, <span class="st">&quot;../data/final_data.RDS&quot;</span>)</span></code></pre></div>
+<span id="cb12-32"><a href="#cb12-32" tabindex="-1"></a>  <span class="fu">left_join</span>(treatment_assignment) <span class="sc">%&gt;%</span></span>
+<span id="cb12-33"><a href="#cb12-33" tabindex="-1"></a>  <span class="fu">left_join</span>(prop_positive_phase_1) <span class="sc">%&gt;%</span></span>
+<span id="cb12-34"><a href="#cb12-34" tabindex="-1"></a>  <span class="fu">left_join</span>(age_sex) <span class="sc">%&gt;%</span></span>
+<span id="cb12-35"><a href="#cb12-35" tabindex="-1"></a>  <span class="fu">left_join</span>(depression) <span class="sc">%&gt;%</span></span>
+<span id="cb12-36"><a href="#cb12-36" tabindex="-1"></a>  <span class="fu">left_join</span>(withdrawal_pre) <span class="sc">%&gt;%</span></span>
+<span id="cb12-37"><a href="#cb12-37" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(is_male, </span>
+<span id="cb12-38"><a href="#cb12-38" tabindex="-1"></a>                  reported_depression, </span>
+<span id="cb12-39"><a href="#cb12-39" tabindex="-1"></a>                  moderate_to_severe_withdrawal_pre_induction),</span>
+<span id="cb12-40"><a href="#cb12-40" tabindex="-1"></a>                as_factor))</span>
+<span id="cb12-41"><a href="#cb12-41" tabindex="-1"></a></span>
+<span id="cb12-42"><a href="#cb12-42" tabindex="-1"></a><span class="fu">saveRDS</span>(final_data, <span class="st">&quot;../data/final_data.RDS&quot;</span>)</span></code></pre></div>
 </div>
 
    

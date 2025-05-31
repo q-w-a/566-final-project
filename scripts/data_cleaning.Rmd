@@ -39,6 +39,10 @@ ids_30_w_phase_2 <- randomization %>%
   filter(which==2) %>% 
   pull(who)
 
+treatment_assignment <- randomization %>%
+    filter(who %in% ids_30 & which == 2)  %>% 
+    select(who, treatment)
+
 ```
 
 
@@ -344,6 +348,7 @@ withdrawal_pre <- withdrawal_pre_post %>%
 
 # final data 
 final_data <- phase_2_outcome %>%
+  left_join(treatment_assignment) %>%
   left_join(prop_positive_phase_1) %>%
   left_join(age_sex) %>%
   left_join(depression) %>%
