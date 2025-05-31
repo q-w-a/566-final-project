@@ -2,6 +2,7 @@
 
 Quinn White, Min Jia, and Songran Wang
 
+## Project Description 
 
 ### Background
 
@@ -21,3 +22,28 @@ For estimation of the optimal treatment regime, we will implement Q-learning usi
 
 To give some background on the approaches we are considering, augmented inverse probability weighting (AIPW) is a method that estimates the average outcome under a fixed treatment rule by combining information from both the treatment assignment model and the outcome model. It improves estimation accuracy by correcting for confounding and selection bias. A key advantage of AIPW is its double robustness: it gives consistent estimates if either the propensity score model or the outcome model is correctly specified. Also, it has lower variance than methods relying on a single model. 
 Q-learning, meanwhile, is a method used to estimate optimal treatment strategies in multiple stages. Q-learning models the outcome associated with each treatment choice and uses a backward recursive approach to find the best treatment strategy at each stage.
+
+## References
+
+Balise, Raymond R. et al. (Nov. 21, 2024). “Data Cleaning and Harmonization of Clinical Trial Data: Medication-
+assisted Treatment for Opioid Use Disorder”. In: PLOS ONE 19.11. Ed. by Vinod Kumar Vashistha, e0312695.
+issn: 1932-6203. doi: 10.1371/journal.pone.0312695. url: https://dx.plos.org/10.1371/journal.
+pone.0312695 (visited on 05/25/2025).
+
+Murphy, Susan A. et al. (May 2007). “Developing Adaptive Treatment Strategies in Substance Abuse Research”.
+In: Drug and Alcohol Dependence 88, S24–S30. issn: 03768716. doi: 10.1016/j.drugalcdep.2006.09.008.
+(Visited on 05/25/2025).
+
+Tsiatis, Anastasios A. et al. (Dec. 2019). Dynamic Treatment Regimes: Statistical Methods for Precision Medicine.
+1st ed. Boca Raton : Chapman, Hall/CRC, 2020. — Series: Chapman & Hall/CRC monographs on statistics,
+and applied probability: Chapman and Hall/CRC. isbn: 978-0-429-19269-2. doi: 10 . 1201 / 9780429192692.
+(Visited on 04/19/2025).
+
+Weiss, Roger D. (Dec. 2011). “Adjunctive Counseling During Brief and Extended Buprenorphine-Naloxone Treat-
+ment for Prescription Opioid Dependence: A 2-Phase Randomized Controlled Trial”. In: Archives of Gen-
+eral Psychiatry 68.12, p. 1238. issn: 0003-990X. doi: 10.1001/archgenpsychiatry.2011.121. (Visited on
+05/25/2025).
+
+Zhang, Yichi et al. (Oct. 2018). “Interpretable Dynamic Treatment Regimes”. In: Journal of the American Statistical
+Association 113.524, pp. 1541–1549. issn: 0162-1459, 1537-274X. doi: 10 . 1080 / 01621459 . 2017 . 1345743.
+(Visited on 04/02/2025).
