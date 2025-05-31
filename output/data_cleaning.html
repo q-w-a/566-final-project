@@ -1391,8 +1391,10 @@ White</p>
 <span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>  <span class="fu">pull</span>(who)</span>
 <span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a></span>
 <span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>treatment_assignment <span class="ot">&lt;-</span> randomization <span class="sc">%&gt;%</span></span>
-<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>    <span class="fu">filter</span>(who <span class="sc">%in%</span> ids_30 <span class="sc">&amp;</span> which <span class="sc">==</span> <span class="dv">2</span>)  <span class="sc">%&gt;%</span> </span>
-<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>    <span class="fu">select</span>(who, treatment)</span></code></pre></div>
+<span id="cb1-21"><a href="#cb1-21" tabindex="-1"></a>    <span class="fu">filter</span>(who <span class="sc">%in%</span> ids_30_w_phase_2)  <span class="sc">%&gt;%</span> </span>
+<span id="cb1-22"><a href="#cb1-22" tabindex="-1"></a>    <span class="fu">select</span>(who, treatment, which) <span class="sc">%&gt;%</span></span>
+<span id="cb1-23"><a href="#cb1-23" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> which, <span class="at">values_from=</span>treatment,</span>
+<span id="cb1-24"><a href="#cb1-24" tabindex="-1"></a>              <span class="at">names_prefix =</span><span class="st">&quot;treatment_phase_&quot;</span>)</span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># treatment assignment </span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">data</span>(randomization)</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>

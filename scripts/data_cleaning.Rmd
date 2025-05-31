@@ -40,8 +40,10 @@ ids_30_w_phase_2 <- randomization %>%
   pull(who)
 
 treatment_assignment <- randomization %>%
-    filter(who %in% ids_30 & which == 2)  %>% 
-    select(who, treatment)
+    filter(who %in% ids_30_w_phase_2)  %>% 
+    select(who, treatment, which) %>%
+  pivot_wider(names_from = which, values_from=treatment,
+              names_prefix ="treatment_phase_")
 
 ```
 
