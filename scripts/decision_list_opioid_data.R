@@ -148,8 +148,11 @@ estimated_decision_list <- estimated_regime$dtr
 
 print.regime(estimated_decision_list, colnames(opioid_dat_formatted$x))
 
-assigned_values_under_optimal <- apply.regime.dl(estimated_regime$dtr[[1]], opioid_dat_formatted$x)
+assigned_values_under_optimal <- apply.regime.dl(estimated_regime$dtr[[1]],
+                                                 opioid_dat_formatted$x)
+saveRDS(assigned_values_under_optimal, "data/assigned_treatment_dl.RDS")
 
+library(tidyverse)
 tibble(optimal_assigned = assigned_values_under_optimal,
        true_assigned = as.numeric(opioid_dat_formatted$a)) %>%
   group_by(optimal_assigned, true_assigned) %>%
@@ -173,4 +176,54 @@ tibble(optimal_assigned = assigned_values,
   ungroup() %>%
   mutate(total = sum(n),
          prop=n/total)
+
+
+
+get_value_dl <- function(data,ind) {
+  
+  data <- data[ind,]
+  
+ # glimpse(data)
+  
+  dat_x <- data %>% 
+    select(-c(who, treatment_phase_2, a, outcome)) %>%
+    mutate(across(where(is.factor), ~as.numeric(.x)-1)) %>%
+    as.matrix()
+  
+  dat_formatted <- list(x=dat_x,
+                        a=as.matrix(data$a),
+                        y=as.matrix(data$outcome),
+                        stage.x = rep(1, ncol(dat_x)))
+  
+  estimated_regime <- estimate.regime.dl(dat_formatted$y, dat_formatted$a,
+                                         dat_formatted$x, dat_formatted$stage.x,
+                                         max.length=10L,
+                                         seed=NULL)
+  
+  estimated_value <- estimated_regime$value
+  
+  return(estimated_value)
+  
+}
+
+library(moonboot)
+
+
+m <- estimate.m(data=opioid_dat,
+                statistic=get_value_dl,
+                method="politis",
+                R=100,
+                replace=FALSE)
+saveRDS(m, "data/optimal_decision_list_m.RDS")
+
+
+value_dist <- map_dbl(1:500, ~ { 
+  ind <- sample(1:nrow(opioid_dat), size = 140, replace = FALSE)
+  get_value_dl(opioid_dat, ind)
+})
+
+dl_ci <- quantile(value_dist,c(.025,.975))
+saveRDS(dl_ci, "data/optimal_decision_list_ci.RDS")
+
+
 

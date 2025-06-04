@@ -1,0 +1,144 @@
+---
+title: "Figures"
+author: "Quinn White"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+theme_c <- function(...){ 
+   # font <- "Helvetica"   #assign font family up front
+  #  font <- "Arial"
+    theme_bw() %+replace%    #replace elements we want to change
+    
+    theme(
+      
+      #text elements
+      plot.title = element_text(             #title
+                 #  family = font,            #set font family
+                   size = 14,                #set font size
+                   face = 'bold',            #bold typeface
+                   hjust = .5,
+                   vjust = 3),               
+      
+      plot.subtitle = element_text(          #subtitle
+                #   family = font,            #font family
+                   size = 10,
+                   hjust = .5,
+                   face = 'italic',
+                   vjust = 3),               #font size
+      
+      axis.title = element_text(             #axis titles
+                #   family = font,            #font family
+                   size = 12),               #font size
+      
+      axis.text = element_text(              #axis text
+                #   family = font,            #axis famuly
+                   size = 8),
+      strip.text = element_text(color="white", size = 13,
+                                margin=unit(c(.1,.1,.1,.1), 'cm')),
+      strip.background = element_rect(fill = "#363636"),
+      # t, r, b, l
+      plot.margin = unit(c(.1,.5,0,.5), "cm")
+      ) %+replace%
+      theme(...)
+   
+}
+
+
+
+```
+
+
+```{r}
+
+opioid_dat <- readRDS(here("data/final_data.RDS")) %>%
+  mutate(a = ifelse(treatment_phase_2 == "Outpatient BUP + EMM", 1, 0),
+         treatment_phase_1 = ifelse(treatment_phase_1 == "Outpatient BUP + EMM", 1, 0),
+         is_male = ifelse(is_male == 1, 1, 0),
+         reported_depression = ifelse(reported_depression == 1, 1, 0),
+         moderate_to_severe_withdrawal_pre_induction = ifelse(
+           moderate_to_severe_withdrawal_pre_induction == 1, 1, 0)) %>%
+  mutate(assignment_ql = readRDS(here("data/assigned_treatment_ql.RDS")),
+         assignment_dl = readRDS(here("data/assigned_treatment_dl.RDS")),
+         assignment_dl = ifelse(assignment_dl == 1, "EMM", "SMM")) 
+
+# Plot heatmap (treatment = 0 or 1) using discrete fill
+ggplot(opioid_dat, aes(x = prop_positive, y = factor(moderate_to_severe_withdrawal_pre_induction),
+                     fill = factor(assignment_ql))) +
+  geom_tile() +
+  scale_fill_manual(values = c("lightblue", "tomato"), name = "Treatment") +
+  labs(
+    x = "Proportion of Visits Positive in Phase 1", 
+    y = "Moderate to Severe Withdrawal Symptoms", 
+    title = "Recommended Treatment by Withdrawal Symptoms\nand Proportion of Visits Positive in Phase 1"
+  ) +
+  theme_minimal() +
+  geom_hline(aes(yintercept=1.5), alpha=.5) +
+  theme_c()
+
+
+# Plot heatmap (treatment = 0 or 1) using discrete fill
+ggplot(opioid_dat, aes(x = prop_positive, y = factor(moderate_to_severe_withdrawal_pre_induction),
+                     fill = factor(assignment_dl))) +
+  geom_tile() +
+  scale_fill_manual(values = c("lightblue", "tomato"), name = "Treatment") +
+  labs(
+    x = "Proportion of Visits Positive in Phase 1", 
+    y = "Moderate to Severe Withdrawal Symptoms", 
+    title = "Recommended Treatment by Withdrawal Symptoms\nand Proportion of Visits Positive in Phase 1"
+  ) +
+  theme_minimal() +
+  geom_hline(aes(yintercept=1.5), alpha=.5) +
+  theme_c()
+
+
+
+# CI Plot
+
+rbind(readRDS(here("data/optimal_decision_list_ci.RDS")),
+        readRDS(here("data/optimal_q_learning_ci.RDS"))) %>%
+  cbind(method = c("Decision List", "Q-Learning")) %>%
+  as_tibble() %>%
+  rename(lower = 1, upper =2) %>%
+  mutate(across(c(lower,upper), as.numeric)) %>%
+  ggplot(aes(xmin=lower, xmax=upper, y=method)) +
+  geom_errorbar(width=.3) +
+  theme_c() +
+  labs(y="")
+       
+
+library(kableExtra)
+
+table_data <- opioid_dat %>%
+  group_by(assignment_ql,
+           assignment_dl) %>%
+  summarize(n=n()) %>%
+  pivot_wider(names_from=assignment_dl, values_from=n) 
+
+table_data %>%
+  kbl(col.names = c(" ", "EMM", "SMM")) 
+
+
+
+# q-learning forest plot
+mod <- readRDS(here("data/optimal_q_learning_model.RDS"))
+
+ci <- confint(mod) %>%
+  as.data.frame() %>%
+  as_tibble(rownames="var")
+
+
+
+opioid_dat %>%
+  ggplot(aes(x=prop_positive)) +
+  facet_wrap(treatment_phase_2~outcome) +
+  geom_histogram()
+
+
+
+```
+
